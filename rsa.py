@@ -71,7 +71,6 @@ if __name__=="__main__":
         num = random.getrandbits(3)
         encrypted_num = rsa_system.encrypt(num)
         decrypted_num = rsa_system.decrypt(encrypted_num)
-
         if num != decrypted_num:
             print("p = {}, is prime: {}".format(rsa_system.p), rsa_system.p in sage.Primes())
             print("q = {}, is prime: {}".format(rsa_system.q), rsa_system.q in sage.Primes())
@@ -81,3 +80,4 @@ if __name__=="__main__":
             print("({}**{})%{} = {}".format(num, rsa_system.e, rsa_system.n, encrypted_num))
             print("({}**{})%{} = {}".format(encrypted_num, rsa_system.d, rsa_system.n, decrypted_num))
             break
+        print("OK")
