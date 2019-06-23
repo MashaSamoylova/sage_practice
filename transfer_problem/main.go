@@ -1,84 +1,114 @@
 package main
 
 import (
-    "fmt"
+	"fmt"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
-type Transaction struct {
-    SupplierIndex int
-    HowMuch int
+var Routers = [][]int{
+	[]int{8, 3, 1},
+	[]int{4, 7, 4},
+	[]int{5, 2, 6},
 }
+
+var Plan = [][]int{
+	[]int{-1, -1, -1},
+	[]int{-1, -1, -1},
+	[]int{-1, -1, -1},
+	[]int{-1, -1, -1},
+}
+
+var Suppliers = []int{30, 90, 50}
+var Customers = []int{70, 60, 30}
 
 func main() {
-    // ______|customers
-    // suppl1
-    // suppl2
-    // suppl3
-    routers := [][]int{
-        []int{-1, 2, 3},
-        []int{3, -1, -1},
-        []int{5, 6, 8},
-    }
-
-    customers := []int{12, 87, 45}
-    suppliers := []int{4, 7, 34}
-    findSolution(routers, suppliers, customers)
+	A := 0
+	for _, q := range Suppliers {
+		A += q
+	}
+	B := 0
+	for _, q := range Customers {
+		B += q
+	}
+	if A > B {
+		addFakeCustomer(A - B)
+	}
+	makeScratchPlan()
+	spew.Dump(Plan)
+	fmt.Println("Price: ", calculatePlanPrice())
 }
 
-func findSolution(routers [][]int, suppliers []int, customers []int) {
-    solutions := make(map[int][]Transaction)
-    n := len(suppliers)
-    for i := 0; i<n; i++ {
-        solutions[i] = []Transaction{}
-    }
-    for supplIndex, suplQuantity := range suppliers {
-        for j := 0; j < n; j++ {
-            cI := findMinRoute(routers[supplIndex])
-            if cI == -1 {
-                break
-            }
-            deliverQuantity := customers[cI]
-            deliverQuantity -= suplQuantity
-            if deliverQuantity <= 0 {
-                deliverQuantity = customers[cI]
-            }
-            customers[cI] -= deliverQuantity
-            if customers[cI] == 0 {
-                deleteCustomerFromRouters(cI, routers)
-            }
-            suppliers[supplIndex] -= deliverQuantity
-            solutions[cI] = append(solutions[cI], Transaction{SupplierIndex: supplIndex, HowMuch: deliverQuantity})
-        }
-    }
-    fmt.Println("Suppliers", suppliers)
-    fmt.Println(solutions)
+func addFakeCustomer(diff int) {
+	Routers = append(Routers, make([]int, len(Routers[0])))
+	Customers = append(Customers, diff)
 }
 
-func findMinRoute(routers []int) int {
-    var min int
-    maxIndex := len(routers) + 1
-    for i, route := range routers {
-        if route != -1 {
-            min = route
-            maxIndex = i
-            break
-        }
-    }
-
-    for i, route := range routers {
-        if route != -1 && route < min {
-            min = route
-            maxIndex = i
-        }
-    }
-    if maxIndex > len(routers) {
-        return -1
-    }
-    return maxIndex
+func makeScratchPlan() {
+	for !allCustomersAreSatisfy() {
+		i, j := findMinRoute()
+		amount := calculateHowMuch(Suppliers[j], Customers[i])
+		Customers[i] -= amount
+		Suppliers[j] -= amount
+		Plan[i][j] = amount
+	}
+	j := findRemain()
+	i := len(Plan) - 1
+	amount := calculateHowMuch(Suppliers[j], Customers[i])
+	Customers[i] -= amount
+	Suppliers[j] -= amount
+	Plan[i][j] = amount
 }
 
-func deleteCustomerFromRouters(customerIndex int, routers [][]int) {
-    for i := 0; i < len(routers); i++ {
-        routers[i][customerIndex] = -1
-    }
+func findMinRoute() (int, int) {
+	min := Routers[0][0]
+	var minI, minJ int
+	for i, _ := range Routers {
+		for j, _ := range Routers[i] {
+			// ignore fake customer
+			if Routers[i][j] < min && Routers[i][j] != 0 && Suppliers[j] > 0 && Customers[i] > 0 {
+				min = Routers[i][j]
+				minI, minJ = i, j
+			}
+		}
+	}
+	return minI, minJ
+}
+
+func calculateHowMuch(SuplQuantity int, CustomerNeed int) int {
+	tmp := CustomerNeed - SuplQuantity
+	if tmp > 0 {
+		return SuplQuantity
+	}
+	return CustomerNeed
+}
+
+func allCustomersAreSatisfy() bool {
+	for i := 0; i < len(Customers)-1; i++ {
+		if Customers[i] > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func findRemain() int {
+	for i, q := range Suppliers {
+		if q > 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+func calculatePlanPrice() int {
+	price := 0
+	for i := 0; i < len(Plan); i++ {
+		for j := 0; j < len(Plan[0]); j++ {
+			if Plan[i][j] != -1 {
+				price += Plan[i][j] * Routers[i][j]
+			}
+		}
+	}
+	return price
 }
