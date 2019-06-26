@@ -12,6 +12,13 @@ var Routers = [][]int{
 	[]int{5, 2, 6},
 }
 
+var PotentialSumms = [][]int{
+	[]int{0, 0, 0},
+	[]int{0, 0, 0},
+	[]int{0, 0, 0},
+	[]int{0, 0, 0},
+}
+
 var Plan = [][]int{
 	[]int{-1, -1, -1},
 	[]int{-1, -1, -1},
@@ -21,6 +28,9 @@ var Plan = [][]int{
 
 var Suppliers = []int{30, 90, 50}
 var Customers = []int{70, 60, 30}
+
+var U = []int{0xff, 0xff, 0xff}
+var V = []int{0xff, 0xff, 0xff, 0xff}
 
 func main() {
 	A := 0
@@ -35,8 +45,14 @@ func main() {
 		addFakeCustomer(A - B)
 	}
 	makeScratchPlan()
-	spew.Dump(Plan)
 	fmt.Println("Price: ", calculatePlanPrice())
+	calculateTransportPotential()
+	calculateSummPotentials()
+	fmt.Println("=================")
+	spew.Dump(Routers)
+	fmt.Println("=================")
+	spew.Dump(PotentialSumms)
+
 }
 
 func addFakeCustomer(diff int) {
@@ -111,4 +127,59 @@ func calculatePlanPrice() int {
 		}
 	}
 	return price
+}
+
+func calculateTransportPotential() {
+	for !allPotentialAreCalculated() {
+		i, j := findMaxRoute()
+		summ := Routers[i][j]
+		if U[j] == 0xff && V[i] == 0xff {
+			U[j] = summ / 2
+			V[i] = summ - U[j]
+			continue
+		}
+		if U[j] == 0xff {
+			U[j] = summ - V[i]
+			continue
+		}
+		if V[i] == 0xff {
+			V[i] = summ - U[j]
+			continue
+		}
+	}
+
+}
+
+func findMaxRoute() (int, int) {
+	max := -1
+	var maxI, maxJ int
+	for i := 0; i < len(Routers); i++ {
+		for j := 0; j < len(Routers[i]); j++ {
+			// ignore fake customer
+			if Routers[i][j] > max && Plan[i][j] != -1 && (U[j] == 0xff || V[i] == 0xff) {
+				max = Routers[i][j]
+				maxI, maxJ = i, j
+			}
+		}
+	}
+	return maxI, maxJ
+}
+
+func allPotentialAreCalculated() bool {
+	for i := 0; i < len(Routers); i++ {
+		for j := 0; j < len(Routers[i]); j++ {
+			if (U[j] == 0xff || V[i] == 0xff) && Plan[i][j] != -1 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func calculateSummPotentials() {
+	for i := 0; i < len(Routers); i++ {
+		for j := 0; j < len(Routers[i]); j++ {
+			PotentialSumms[i][j] = V[i] + U[j]
+		}
+	}
 }
