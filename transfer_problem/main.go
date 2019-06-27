@@ -6,11 +6,51 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
+// var Routers = [][]int{
+// 	[]int{8, 3, 1},
+// 	[]int{4, 7, 4},
+// 	[]int{5, 2, 6},
+// }
+
+// var Suppliers = []int{30, 90, 50}
+// var Customers = []int{100, 30, 30}
+
+// var Routers = [][]int{
+// 	[]int{8, 3, 1},
+// 	[]int{4, 7, 4},
+// 	[]int{5, 2, 6},
+// }
+
+// var Suppliers = []int{30, 90, 50}
+// var Customers = []int{70, 60, 30}
+
+// var Routers = [][]int{
+// 	[]int{8, 3, 1},
+// 	[]int{4, 1, 4},
+// 	[]int{5, 2, 6},
+// }
+
+// var Suppliers = []int{30, 90, 50}
+// var Customers = []int{70, 60, 30}
+
 var Routers = [][]int{
 	[]int{8, 3, 1},
-	[]int{4, 7, 4},
+	[]int{4, 1, 4},
 	[]int{5, 2, 6},
 }
+
+var Suppliers = []int{10, 100, 50}
+var Customers = []int{70, 60, 30}
+
+/*
+var Routers = [][]int{
+	[]int{8, 3, 1},
+	[]int{4, 1, 4},
+	[]int{5, 2, 6},
+}
+
+var Suppliers = []int{10, 110, 50}
+var Customers = []int{70, 60, 30}*/
 
 var PotentialSumms = [][]int{
 	[]int{0, 0, 0},
@@ -26,9 +66,6 @@ var Plan = [][]int{
 	[]int{-1, -1, -1},
 }
 
-var Suppliers = []int{30, 90, 50}
-var Customers = []int{70, 60, 30}
-
 var U = []int{0xff, 0xff, 0xff}
 var V = []int{0xff, 0xff, 0xff, 0xff}
 
@@ -41,12 +78,11 @@ func main() {
 	for _, q := range Customers {
 		B += q
 	}
-	if A > B {
-		addFakeCustomer(A - B)
-	}
+	addFakeCustomer(A - B)
 	makeScratchPlan()
 	fmt.Println("Price: ", calculatePlanPrice())
 	for {
+		fmt.Println("=====================")
 		restoreUV()
 		calculateTransportPotential()
 		calculateSummPotentials()
@@ -55,7 +91,7 @@ func main() {
 			fmt.Println("This plan is optimal")
 			break
 		} else {
-			fmt.Println("TRY UPGRADE")
+			fmt.Println("TRY UPGRADE i = ", i, "j = ", j)
 			tryToUpgrade(i, j)
 		}
 	}
@@ -74,6 +110,7 @@ func restoreUV() {
 }
 
 func addFakeCustomer(diff int) {
+	fmt.Println("Add fake castomer with diff", diff)
 	Routers = append(Routers, make([]int, len(Routers[0])))
 	Customers = append(Customers, diff)
 }
@@ -88,10 +125,13 @@ func makeScratchPlan() {
 	}
 	j := findRemain()
 	i := len(Plan) - 1
-	amount := calculateHowMuch(Suppliers[j], Customers[i])
-	Customers[i] -= amount
-	Suppliers[j] -= amount
-	Plan[i][j] = amount
+	// for fake customer
+	if j != -1 {
+		amount := calculateHowMuch(Suppliers[j], Customers[i])
+		Customers[i] -= amount
+		Suppliers[j] -= amount
+		Plan[i][j] = amount
+	}
 }
 
 func findMinRoute() (int, int) {
@@ -127,6 +167,7 @@ func allCustomersAreSatisfy() bool {
 }
 
 func findRemain() int {
+	fmt.Println("Suppliers", Suppliers)
 	for i, q := range Suppliers {
 		if q > 0 {
 			return i
@@ -227,7 +268,7 @@ func calculateSummPotentials() {
 }
 
 func checkOptimalPlan() (int, int) {
-	for i := 0; i < len(Routers); i++ {
+	for i := 0; i < len(Routers)-1; i++ {
 		for j := 0; j < len(Routers[i]); j++ {
 			if PotentialSumms[i][j] > Routers[i][j] {
 				return i, j
@@ -246,6 +287,8 @@ func tryToUpgrade(i int, j int) {
 			continue
 		}
 		if Routers[i][jCopy] > maxRouteFromString && Plan[i][jCopy] != -1 {
+			fmt.Println("jCopy", jCopy)
+			maxRouteFromString = Routers[i][jCopy]
 			maxRouteFromStringIndex = jCopy
 		}
 	}
