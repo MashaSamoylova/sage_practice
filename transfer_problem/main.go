@@ -46,13 +46,31 @@ func main() {
 	}
 	makeScratchPlan()
 	fmt.Println("Price: ", calculatePlanPrice())
-	calculateTransportPotential()
-	calculateSummPotentials()
-	fmt.Println("=================")
-	spew.Dump(Routers)
-	fmt.Println("=================")
-	spew.Dump(PotentialSumms)
+	for {
+		restoreUV()
+		calculateTransportPotential()
+		calculateSummPotentials()
+		i, j := checkOptimalPlan()
+		if i == -1 && j == -1 {
+			fmt.Println("This plan is optimal")
+			break
+		} else {
+			fmt.Println("TRY UPGRADE")
+			tryToUpgrade(i, j)
+		}
+	}
+	spew.Dump(Plan)
+	fmt.Println("Price: ", calculatePlanPrice())
 
+}
+
+func restoreUV() {
+	for i, _ := range U {
+		U[i] = 0xff
+	}
+	for i, _ := range V {
+		V[i] = 0xff
+	}
 }
 
 func addFakeCustomer(diff int) {
@@ -130,8 +148,8 @@ func calculatePlanPrice() int {
 }
 
 func calculateTransportPotential() {
+	i, j := findMaxRoute()
 	for !allPotentialAreCalculated() {
-		i, j := findMaxRoute()
 		summ := Routers[i][j]
 		if U[j] == 0xff && V[i] == 0xff {
 			U[j] = summ / 2
@@ -146,8 +164,32 @@ func calculateTransportPotential() {
 			V[i] = summ - U[j]
 			continue
 		}
+		i, j = findNext(i, j)
+		if i == -1 && j == -1 {
+			i, j = findMaxRoute()
+		}
 	}
 
+}
+
+func findNext(i int, j int) (int, int) {
+	for jCopy := 0; jCopy < len(Routers[i]); jCopy++ {
+		if jCopy == j {
+			continue
+		}
+		if Plan[i][jCopy] != -1 && U[jCopy] == 0xff {
+			return i, jCopy
+		}
+	}
+	for iCopy := 0; iCopy < len(Routers); iCopy++ {
+		if iCopy == i {
+			continue
+		}
+		if Plan[iCopy][j] != -1 && V[iCopy] == 0xff {
+			return iCopy, j
+		}
+	}
+	return -1, -1
 }
 
 func findMaxRoute() (int, int) {
@@ -181,5 +223,58 @@ func calculateSummPotentials() {
 		for j := 0; j < len(Routers[i]); j++ {
 			PotentialSumms[i][j] = V[i] + U[j]
 		}
+	}
+}
+
+func checkOptimalPlan() (int, int) {
+	for i := 0; i < len(Routers); i++ {
+		for j := 0; j < len(Routers[i]); j++ {
+			if PotentialSumms[i][j] > Routers[i][j] {
+				return i, j
+			}
+		}
+	}
+	return -1, -1
+}
+
+func tryToUpgrade(i int, j int) {
+	maxRouteFromString := -1
+	maxRouteFromStringIndex := -1
+	var jCopy int
+	for jCopy = 0; jCopy < len(Routers[j]); jCopy++ {
+		if jCopy == j {
+			continue
+		}
+		if Routers[i][jCopy] > maxRouteFromString && Plan[i][jCopy] != -1 {
+			maxRouteFromStringIndex = jCopy
+		}
+	}
+	carryCount := 0
+	if Plan[i][j] == -1 {
+		Plan[i][j] = Plan[i][maxRouteFromStringIndex]
+		carryCount = Plan[i][maxRouteFromStringIndex]
+		Plan[i][maxRouteFromStringIndex] = -1
+	} else {
+		Plan[i][j] += Plan[i][maxRouteFromStringIndex]
+		carryCount = Plan[i][maxRouteFromStringIndex]
+		Plan[i][maxRouteFromStringIndex] = -1
+	}
+
+	maxRouteFromColumnIndex := 0
+	var iCopy int
+	for iCopy = 0; iCopy < len(Routers); iCopy++ {
+		if iCopy == i {
+			continue
+		}
+		if Plan[iCopy][j] >= carryCount {
+			maxRouteFromColumnIndex = iCopy
+		}
+	}
+	if Plan[maxRouteFromColumnIndex][maxRouteFromStringIndex] == -1 {
+		Plan[maxRouteFromColumnIndex][maxRouteFromStringIndex] = carryCount
+		Plan[maxRouteFromColumnIndex][j] -= carryCount
+	} else {
+		Plan[maxRouteFromColumnIndex][maxRouteFromStringIndex] += carryCount
+		Plan[maxRouteFromColumnIndex][j] -= carryCount
 	}
 }
